@@ -13,16 +13,18 @@ def connect(path):
     
     global cursor, connection
     
+    exists = os.path.exists(path)
+
     connection = sqlite3.connect(path)
     connection.row_factory = sqlite3.Row
     cursor = connection.cursor()
     cursor.execute(' PRAGMA forteign_keys=ON; ')
 
     #if database does  not yet exist creates the tables.
-    if not os.path.exists(path):
+    if not exists:
         initScript = open('p1-tables.sql', 'r').read()
         cursor.executescript(initScript)
-        connection.commit()
+    connection.commit()
 
 
 def printScreen(title):
@@ -58,7 +60,7 @@ def login():
         
     printScreen('Login')
     username = input('Username: ')
-    userpass = input('Password: ')
+    userpass = hashPassword(input('Password: '))
 
     sqlcmd = "SELECT user_id FROM users WHERE login=:username AND password=:userpass"
     
@@ -71,8 +73,6 @@ def login():
 
 
 def register():
-
-    #ADD EXISTING PERSONELL TO THE USER TABLE -- FIX!!!!!!!!
 
     global user, cursor, connection
 
@@ -89,23 +89,22 @@ def register():
         except:
             break
 
-    password = input('Password: ')
-    #hash password
+    password = hashPassword(input('Password: '))
 
     #Get user role
     while True:
-        role = input('Role:\n1.Account Manager\n2.Supervisor\n3.Dispatcher\n4.Driver\n\n')
+        role = input("Role:\n1.Account Manager\n2.Supervisor\n3.Dispatcher\n4.Driver\n\n")
         if role == '1':
-            role = "Account Manager"
+            role == 'Account Manager'
             break
-        if role == '2':
-            role = "Supervisor"
+        elif role == '2':
+            role == 'Supervisor'
             break
-        if role == '3':
-            role = "Dispatcher"
+        elif role == '3':
+            role == 'Dispatcher'
             break
-        if role == '4':
-            role = "Driver"
+        elif role == '4':
+            role == 'Driver'
             break
 
     #Assign a random not already used id.
@@ -143,6 +142,8 @@ def main():
         if cmd == '2':
             register()
             break
+
+    cursor.close()
 
 if __name__ == "__main__":
     main()

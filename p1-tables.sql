@@ -589,7 +589,3 @@ INSERT INTO service_fulfillments VALUES('2016-08-03 23:59:30','11755945','61','J
 INSERT INTO service_fulfillments VALUES('2016-03-25 23:59:30','11755945','54','WP1AB','41024','3FRWF7','JHLRE3');
 INSERT INTO service_fulfillments VALUES('2007-04-16 23:59:30','73833854','55','WP1AB','41024','3FRWF7','JHLRE3');
 INSERT INTO service_fulfillments VALUES('2014-09-25 23:59:30','19924453','56','WP1AB','41024','3FRWF7','JHLRE3');
-
-
---Data oreoared by Nikolai Teterski
-INSERT INTO users VALUES('43743','driver', 'Nik', 'pass123');
