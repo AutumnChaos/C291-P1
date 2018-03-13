@@ -41,21 +41,33 @@ def hashPassword(password):
     iterations = 100000
 
     return pbkdf2_hmac(hash_name, bytearray(password, 'ascii'), bytearray(salt, 'ascii'), iterations)
-    
-def supervisor_newMasterAccount():
 
-    global cursor, connection
+def getDate(promt):
+    date = None
+    while True:
+        date = input( promt + " (YYYY-MM-DD): ")
+        try:
+            datetime.strptime(date,"%Y-%m-%d")
+            break
+        except:
+            pass
+    return date
 
-    #Select account manager
 
-    #Select all personnel with matching supervisor_pid and who are account managers
-    sqlcmd = "SELECT pid FROM personnel WHERE supervisor_pid=:user"
+def supervisor_getAccountManagers():
+     #Select all personnel with matching supervisor_pid and who are account managers
+    sqlcmd = "SELECT pid FROM personnel WHERE supervisor_pid=:user AND EXISTS (SELECT pid FROM account_managers)"
+
     cursor.execute(sqlcmd, {"user":user})
     supervised = cursor.fetchall()
     for i in range(0, len(supervised)):
         supervised[i] = supervised[i][0]
+    return supervised
 
-    #Selecting an account manager    
+def supervisor_getAccountManager():
+   
+    supervised = supervisor_getAccountManagers()
+
     manager = None
     while True:
         printScreen('Supervised managers')
@@ -64,6 +76,15 @@ def supervisor_newMasterAccount():
         manager = input("Select an account manager:\n\n")
         if manager in supervised:
             break
+    return manager
+
+
+def supervisor_newMasterAccount():
+
+    global cursor, connection
+
+    #Selecting an account manager    
+    manager = supervisor_getAccountManager()
     
     account_no = None
     #Generate unique random for account_no
@@ -96,26 +117,18 @@ def supervisor_newMasterAccount():
             customer_type = 'residential'
             break
     
-    start_date = None
+    start_date = getDate("Start date")
+
+    end_date = getDate("End date")
+
+    total_amount = None
     while True:
-        start_date = input("Start date (YYYY-MM-DD): ")
+        total_amount = input("Total amount for all services : $") 
         try:
-            datetime.strptime(start_date,"%Y-%m-%d")
+            float(total_amount)
             break
         except:
             pass
-
-    end_date = None
-    while True:
-        end_date = input("End date (YYYY-MM-DD): ")
-        try:
-            datetime.strptime(end_date,"%Y-%m-%d")
-            break
-        except:
-            pass
-
-    #Add input check
-    total_amount = input("Total amount for all services : $") 
 
     #Create account
     sqlcmd = "INSERT INTO accounts(account_no, account_mgr, customer_name, contact_info, customer_type, start_date, end_date, total_amount) VALUES (:account_no, :manager, :customer_name, :contact_info,:customer_type, :start_date, :end_date, :total_amount)"
@@ -123,17 +136,74 @@ def supervisor_newMasterAccount():
     connection.commit()
 
 
+def manager_getCustomers(pid):
+
+    global cursor, connection
+
+    sqlcmd = "SELECT account_no FROM accounts WHERE account_mgr =:pid"
+    cursor.execute(sqlcmd, {"pid":pid})
+    customers = cursor.fetchall()
+    for i in range(0, len(customers)):
+        customers[i] = customers[i][0]
+    return customers
+
 def supervisor_customerReport():
-    pass
+    
+    #Get all account managers
+    supervised = supervisor_getAccountManagers()
+
+    #Get all customers for supervised managers
+    customers = []
+    for pid in supervised:
+        print(pid)
+        customers += manager_getCustomers(pid)
+
+    #Select a customer
+    customer = None
+    while True:
+        printScreen('Customer Accounts');
+        for c in customers:
+            print(c)
+        customer = input("\nSelect an account:\n\n");
+        if customer in customers:
+            break
+
+    #Find total number of service agreements    WRONG
+    sqlcmd = "SELECT count(*) FROM service_agreements WHERE master_account=:customer"
+    cursor.execute(sqlcmd, {"customer":customer})
+    total_agreements = cursor.fetchone()[0]
+
+    #Find sum of prices and sum of internal costs   WRONG
+    sqlcmd = "SELECT SUM(price), SUM(internal_cost) FROM service_agreements WHERE master_account=:customer"
+    cursor.execute(sqlcmd, {"customer":customer})
+    priceSum, internalCostsSum = cursor.fetchone()
+
+    #number of waste types in agreement
+    sqlcmd = "SELECT DISTINCT waste_type FROM service_agreements WHERE master_account=:customer"
+    cursor.execute(sqlcmd, {"customer":customer})
+    totalWasteTypes = len(cursor.fetchone()[0])
+    
+
+    #Find account manager name
+    sqlcmd = "SELECT name FROM personnel WHERE pid IN (SELECT account_mgr FROM accounts WHERE account_no=:customer)"
+    cursor.execute(sqlcmd, {"customer":customer})
+    manager = cursor.fetchone()[0] 
+   
+    printScreen("Summary Report - Customer:"+ customer)
+    print("Account manager:", manager)
+    print("Total # of service agreements:", total_agreements)
+    print("Total # of waste types:", totalWasteTypes)
+    print("Sum of all prices: $" + str(priceSum))
+    print("Sum of all internal costs: $" + str(internalCostsSum))
 
 def supervisor_managersReport():
     pass
 
 
 def supervisorActivity():
-    printScreen('Supervisor Actions')
-    cmd = input("1.Create new master account\n2.Create summary report for customer\n3.Create summary report for each supervised account manager\n0.Log out\n\n")
     while True:
+        printScreen('Supervisor Actions')
+        cmd = input("1.Create new master account\n2.Create summary report for customer\n3.Create summary report for each supervised account manager\n0.Log out\n\n")
         if cmd == '1':
             supervisor_newMasterAccount()
         if cmd == '2':
@@ -250,10 +320,10 @@ def main():
     connect("./waste_management.db")
 
     #Debug
-    user = '74569'
+    user = '55263'
 
     #supervisor_newMasterAccount()
-
+    supervisor_customerReport()
     while True:
 
         printScreen('Mini Project 1')
