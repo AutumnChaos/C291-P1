@@ -1,5 +1,6 @@
 from random import randint
 from hashlib import pbkdf2_hmac
+from datetime import datetime
 import sqlite3
 import sys
 import os
@@ -43,6 +44,8 @@ def hashPassword(password):
     
 def supervisor_newMasterAccount():
 
+    global cursor, connection
+
     #Select account manager
 
     #Select all personnel with matching supervisor_pid and who are account managers
@@ -53,6 +56,7 @@ def supervisor_newMasterAccount():
         supervised[i] = supervised[i][0]
 
     #Selecting an account manager    
+    manager = None
     while True:
         printScreen('Supervised managers')
         for i in range(0, len(supervised)):
@@ -61,7 +65,7 @@ def supervisor_newMasterAccount():
         if manager in supervised:
             break
     
-
+    account_no = None
     #Generate unique random for account_no
     while True:
         account_no = str(randint(0,sys.maxsize))
@@ -76,6 +80,7 @@ def supervisor_newMasterAccount():
     customer_name = input("Customer name: ")
     contact_info = input("Contact information: ")
     
+    customer_type = None
     while True:
         cmd = input("Customer type:\n1.Municipal\n2.Commercial\n3.Industrial\n4.Residential\n\n")
         if cmd == '1':
@@ -90,13 +95,33 @@ def supervisor_newMasterAccount():
         if cmd == '4':
             customer_type = 'residential'
             break
-        
-    #start_date
-    #end_date
+    
+    start_date = None
+    while True:
+        start_date = input("Start date (YYYY-MM-DD): ")
+        try:
+            datetime.strptime(start_date,"%Y-%m-%d")
+            break
+        except:
+            pass
 
-    total_ammount = input("Total ammout for all services : $")
+    end_date = None
+    while True:
+        end_date = input("End date (YYYY-MM-DD): ")
+        try:
+            datetime.strptime(end_date,"%Y-%m-%d")
+            break
+        except:
+            pass
+
+    #Add input check
+    total_amount = input("Total amount for all services : $") 
 
     #Create account
+    sqlcmd = "INSERT INTO accounts(account_no, account_mgr, customer_name, contact_info, customer_type, start_date, end_date, total_amount) VALUES (:account_no, :manager, :customer_name, :contact_info,:customer_type, :start_date, :end_date, :total_amount)"
+    cursor.execute(sqlcmd, {"account_no":account_no, "manager":manager, "customer_name":customer_name, "contact_info":contact_info, "customer_type":customer_type, "start_date":start_date, "end_date":end_date, "total_amount":total_amount})
+    connection.commit()
+
 
 def supervisor_customerReport():
     pass
@@ -107,26 +132,21 @@ def supervisor_managersReport():
 
 def supervisorActivity():
     printScreen('Supervisor Actions')
-    cmd = input("1.Create new master account\n2.Create summary report for customer\n3.Create summary report for each supervised account manager\n\n")
+    cmd = input("1.Create new master account\n2.Create summary report for customer\n3.Create summary report for each supervised account manager\n0.Log out\n\n")
     while True:
         if cmd == '1':
             supervisor_newMasterAccount()
-            break
         if cmd == '2':
             supervisor_customerReport()
-            break
         if cmd == '3':
             supervisor_managersReport()
-            break
+        if cmd == '0':
+            return
+
         
 
 def applyRole():
-
-    #DEBUG!!! REMOVE LATER
-    #setting user_id to an existing id in the database.
-    global user
-    user = '74569'
-
+    
     if role == "Supervisor":
         supervisorActivity()
 
@@ -215,10 +235,6 @@ def register():
         except:
             break
 
-    #DEBUG!!! REMOVE LATER
-    #setting user_id to an existing id in the database.
-    user = '74569'
-
     #Insert into user table
     sqlcmd = "INSERT INTO users(user_id, role, login, password) VALUES (:user_id, :role, :login, :password)"
     cursor.execute(sqlcmd, {"user_id":user_id, "role":role, "login":username, "password":password})
@@ -229,9 +245,14 @@ def register():
 
 def main():
     
-    global cursor, connection
+    global user, cursor, connection
 
     connect("./waste_management.db")
+
+    #Debug
+    user = '74569'
+
+    #supervisor_newMasterAccount()
 
     while True:
 
@@ -241,7 +262,6 @@ def main():
             break
         if cmd == '1':
             login()
-            break
         if cmd == '2':
             register()
             break
